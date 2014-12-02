@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "devDependencies": {
+    "gulp": "~0.1",
+    "gulp-uglify": "~0.1",
+    "gulp-notify": "~0.1",
+  },
+  "scripts": {
+    "test": "grunt travis --verbose"
+  }
+}
