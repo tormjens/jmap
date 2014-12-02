@@ -1,333 +1,505 @@
-/*!
- * jMap - A jQuery Google Maps plugin
- * http://notasite.io
- *
- * Copyright 2014, Tor Morten Jensen
- * http://tormorten.no/
- * Dual licensed under the MIT and GPL Version 2 licenses.
+/*
+ * jmap.js Version 0.1
+ * A jQuery Google Maps plugin
+ *  
+ * Licensed under MIT license
  * http://www.opensource.org/licenses/mit-license.php
- * http://www.gnu.org/licenses/gpl-2.0.html
- *
- * @author Tor Morten Jensen
- * @requires jQuery v2.0+
- * @requires Google Maps API v3
+ * 
+ * Copyright (c) 2014 Tor Morten Jensen
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a 
+ * copy of this software and associated documentation files (the "Software"), 
+ * to deal in the Software without restriction, including without limitation 
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense, 
+ * and/or sell copies of the Software, and to permit persons to whom the 
+ * Software is furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in 
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
  */
+(function($, window, document, undefined) {
+
+    /**
+     * Store the plugin name in a variable. It helps you if later decide to 
+     * change the plugin's name
+     * @type {String}
+     */
+    var pluginName = 'jMap';
+ 
+    /**
+     * The plugin constructor
+     * @param {DOM Element} element The DOM element where plugin is applied
+     * @param {Object} options Options passed to the constructor
+     */
+    function jMap(element, options) {
+
+        // Store a reference to the source element
+        this.el = element;
+
+        // Store a jQuery reference  to the source element
+        this.$el = $(element);
+
+        // Set the instance options extending the plugin defaults and
+        // the options passed by the user
+        this.settings = $.extend({}, $.fn[pluginName].defaults, options);
+
+        // map object
+        this.map = null;
+
+        // raw markers
+        this.markers = null;
+
+        // google markers
+        this.map_markers = [];
+
+        this.init();
+    }
+
+    /**
+     * Set up your jMap protptype with desired methods.
+     * It is a good practice to implement 'init' and 'destroy' methods.
+     */
+    jMap.prototype = {
+        
+        /**
+         * Initialize the plugin instance.
+         * Set any other attribtes, store any other element reference, register 
+         * listeners, etc
+         *
+         * When bind listerners remember to name tag it with your plugin's name.
+         * Elements can have more than one listener attached to the same event
+         * so you need to tag it to unbind the appropriate listener on destroy:
+         * 
+         * @example
+         * this.$someSubElement.on('click.' + pluginName, function() {
+         *      // Do something
+         * });
+         *         
+         */
+        init: function() {
+
+            // check for google maps api
+            if (typeof google === 'object' && typeof google.maps === 'object') {
+
+                // render the map
+                this._renderMap();
+
+            }
+            else {
+                // throw an error if it is not loaded
+                this._error( 'Google Maps API is not loaded. Load it before loading jMap.' );
+            }
+        },
+
+        /**
+         * Evaluates a string to see if it is a function and if so runs it
+         * 
+         * @param  {[string]} string The string to search for a function
+         * @return {[void]} No return
+         */
+        _runFunction: function( string, options ) {
+
+            if (typeof string == 'function') {
+                string.call(this, options);
+            }
+
+        },
+
+
+        /**
+         * Renders a Google Map
+         * 
+         * @return {[void]} No return
+         */
+        _renderMap: function() {
+
+            // find and store markers
+            this._findMarkers();
+            
+            // maybe set height
+            if ( this.$el.height() === 0 ) {
+                this._error( 'Container has no height. Setting it to '+ this.settings.height +'px.' );
+                this.$el.height(this.settings.height);
+            }
 
- (function($){
+            // find the map type
 
- 	// map plugin object
- 	window.jMap = {
+            var type = '';
 
-		// map settings
-		settings: null,
+            switch( this.settings.type ) {
 
-		// map container
-		container: null,
+                case 'hybrid' :
+                    type = google.maps.MapTypeId.HYBRID;
 
-		// map object
-		map: null,
+                case 'satellite' :
+                    type = google.maps.MapTypeId.SATELLITE;
 
-		// raw markers
-		markers: null,
+                case 'terrain' :
+                    type = google.maps.MapTypeId.TERRAIN;
 
-		// google markers
-		map_markers: [],
+                default :
+                    type = google.maps.MapTypeId.ROADMAP;
 
- 		// map init
- 		init: function( wrapper, options ) {
+            }
 
- 			// parse options with our own stuff
- 			this.settings = $.extend({
-				lat				: 62.10,
-				lng				: 10.10,
-				zoom			: 16,
-				type 			: 'roadmap',
-				markers			: null,
-				centerMarkers	: false,
-				geoCenter		: true, // will be overridden if centerMarkers = true
-				debug			: false,
-				beforeMapInit	: null,
-				afterMapInit	: null,
-				beforeMarkerAdd	: null,
-				afterMarkerAdd	: null,
-				beforeCenter	: null,
-				afterCenter		: null,
-				beforeGeoCenter	: null,
-				afterGeoCenter	: null,
-			}, options);
+            // setup arguments
+            var args = {
+                center      : new google.maps.LatLng(this.settings.lat, this.settings.lng),
+                zoom        : this.settings.zoom,
+                mapTypeId   : type
+            };
 
-			// set the container
-			this.container = $( wrapper );
+            // before the map init
+            this._runFunction( this.settings.beforeMapInit );
 
-			// check for google maps api
-			if (typeof google === 'object' && typeof google.maps === 'object') {
+            // create the map object
+            this.map        = new google.maps.Map( this.$el[0], args);
 
-	 			// render the map
-	 			this.render();
+            // after map init
+            this._runFunction( this.settings.afterMapInit );
 
- 			}
- 			else {
- 				// throw an error if it is not loaded
- 				this.error( 'Google Maps API is not loaded. Load it before loading jMap.' );
- 			}
+            // before the marker add
+            this._runFunction( this.settings.beforeMarkerAdd );
 
-			
- 		},
+            // adds markers to the map
+            this._addMarkers();
 
- 		// checks if a string is a function and runs it
- 		run_function: function( string ) {
+            // after the marker add
+            this._runFunction( this.settings.afterMarkerAdd );
 
- 			if (typeof string == 'function') {
-		        string.call(this);
-		    }
+            // maybe center on all markers
+                if( this.settings.centerMarkers ) {
 
- 		},
+                // before setting the center
+                this._runFunction( this.settings.beforeCenter );
 
- 		// render the map
- 		render: function() {
+                this.centerMap();
 
- 			// find and store markers
- 			this.find_markers();
- 			
- 			// maybe set height
- 			if ( this.container.height() === 0 ) {
- 				this.error( 'Container has no height. Setting it to 350px.' );
- 				this.container.height(350);
- 			}
+                // after setting the center
+                this._runFunction( this.settings.afterCenter );
 
- 			// find the map type
+            }
+            // maybe set geo
+            else {
 
- 			var type = '';
+                // before setting the center
+                this._runFunction( this.settings.beforeGeoCenter );
 
- 			switch( this.settings.type ) {
+                this.geoCenter();
 
- 				case 'hybrid' :
- 					type = google.maps.MapTypeId.HYBRID;
+                // before setting the center
+                this._runFunction( this.settings.afterGeoCenter );
+                
+            }
 
- 				case 'satellite' :
- 					type = google.maps.MapTypeId.SATELLITE;
 
- 				case 'terrain' :
- 					type = google.maps.MapTypeId.TERRAIN;
+        },
 
- 				default :
- 					type = google.maps.MapTypeId.ROADMAP;
+        /**
+         * Finds all pre-set markers to the map. 
+         * jMap accepts marker data both in DOM and via the options object
+         * 
+         * @return {[void]} No return
+         */
+        _findMarkers: function() {
 
- 			}
+            // the array for our markers
+            var markers = [];
 
- 			// setup arguments
- 			var args = {
- 				center 		: new google.maps.LatLng(this.settings.lat, this.settings.lng),
- 				zoom		: this.settings.zoom,
-				mapTypeId	: type
- 			};
+            // first find markers in DOM
+            this.$el.find( 'div.marker' ).each(function() {
 
- 			// before the map init
- 			this.run_function( this.settings.beforeMapInit );
+                var lat         = $(this).data('lat');
+                var lng         = $(this).data('lng');
+                var content     = $(this).html();
 
- 			// create the map object
- 			this.map 		= new google.maps.Map( this.container[0], args);
+                var obj = {
+                    lat         : lat,
+                    lng         : lng,
+                    content     : content
+                }
 
- 			// after map init
- 			this.run_function( this.settings.afterMapInit );
+                markers.push(obj);
 
- 			// before the marker add
- 			this.run_function( this.settings.beforeMarkerAdd );
+            });
 
- 			// adds markers to the map
- 			this.add_markers();
+            // find markers from the options
+            if( this.settings.markers !== null ) {
 
- 			// after the marker add
- 			this.run_function( this.settings.afterMarkerAdd );
+                $.each(this.settings.markers, function(index, content) {
+                    markers.push(content);
+                });
 
- 			// maybe center on all markers
-	 			if( this.settings.centerMarkers ) {
+            }
 
-	 			// before setting the center
-	 			this.run_function( this.settings.beforeCenter );
+            // push markers to the array
+            this.markers = markers;
 
- 				this.center();
+        },
 
-	 			// after setting the center
-	 			this.run_function( this.settings.afterCenter );
+        /**
+         * Adds all pre-set markers to the map
+         * 
+         * @return {[void]} No return
+         */
+        _addMarkers: function() {
 
- 			}
- 			// maybe set geo
- 			else {
+            if( this.markers !== null ) {
 
-	 			// before setting the center
-	 			this.run_function( this.settings.beforeGeoCenter );
+                var parent = this;
 
- 				this.geoCenter();
+                $.each(this.markers, function(index, content) {
 
-	 			// before setting the center
-	 			this.run_function( this.settings.afterGeoCenter );
- 				
- 			}
+                    parent.addMarker( content );
 
+                });
 
- 		},
+            }
 
- 		// sets markers
- 		find_markers: function() {
+        },
 
- 			// the array for our markers
- 			var markers = [];
+        /**
+         * Add a new marker to the map
+         *
+         * @example
+         * $('#element').jMap('addMarker',{ lat: 00.00, lng: 00.00, content: 'Balooo', events: {} });
+         *  
+         * @param  {[object]} options The options for a new marker
+         * @return {[boolean]} Success
+         */
+        addMarker: function( marker ) {
 
- 			// first find markers in DOM
- 			this.container.find( 'div.marker' ).each(function() {
+            var markers = new google.maps.Marker({
+                position    : new google.maps.LatLng( marker.lat, marker.lng ),
+                map         : this.map
+            });
 
- 				var lat 		= $(this).data('lat');
- 				var lng 		= $(this).data('lng');
- 				var content 	= $(this).html();
+            this.map_markers.push(markers);
 
- 				var obj = {
- 					lat 		: lat,
- 					lng 		: lng,
- 					content 	: content
- 				}
+            var parent = this;
 
- 				markers.push(obj);
+            if( typeof marker.content !== 'undefined' ) {
 
- 			});
+                var infowindow = new google.maps.InfoWindow({
+                    content     : marker.content
+                });
 
- 			// find markers from the options
- 			if( this.settings.markers !== null ) {
+                // show info window when marker is clicked
+                google.maps.event.addListener(markers, 'click', function() {
 
- 				$.each(this.settings.markers, function(index, content) {
- 					markers.push(content);
- 				});
+                    infowindow.open( this.map, markers );
 
- 			}
+                });
 
- 			// push markers to the array
- 			this.markers = markers;
+            }
 
- 		},
+            if( marker.events ) {
 
- 		// adds markers to the map
- 		add_markers: function() {
+            	for( var key in marker.events ) {
 
- 			if( this.markers !== null ) {
+					google.maps.event.addListener(markers, key, function() {
 
- 				var parent = this;
+	                    marker.events[key].call(parent, this, markers, marker);
 
- 				$.each(this.markers, function(index, content) {
+	                });            		
 
-	 				var marker = new google.maps.Marker({
-	 					position	: new google.maps.LatLng( content.lat, content.lng ),
-	 					map 		: parent.map
-	 				});
+            	}
 
-	 				parent.map_markers.push(marker);
+            }
 
-	 				if( typeof content.content !== 'undefined' ) {
+            return true;
 
-	 					var infowindow = new google.maps.InfoWindow({
-							content		: content.content
-						});
+        },
 
-						// show info window when marker is clicked
-						google.maps.event.addListener(marker, 'click', function() {
+        /**
+         * Centers the map around the markers added to it
+         *
+         * @example
+         * $('#element').jMap('centerMap');
+         * 
+         * @return {[void]} No return
+         */
+        centerMap: function() {
 
-							infowindow.open( parent.map, marker );
+            // vars
+            var bounds = new google.maps.LatLngBounds();
 
-						});
+            // loop through all markers and create bounds
+            $.each( this.map_markers, function( i, marker ){
 
-	 				}
+                var latlng = new google.maps.LatLng( marker.position.lat(), marker.position.lng() );
 
-	 			});
+                bounds.extend( latlng );
 
- 			}
+            });
 
- 		},
+            // only 1 marker?
+            if( this.map_markers.length == 1 )
+            {
+                // set center of map
+                this.map.setCenter( bounds.getCenter() );
+                this.map.setZoom( 16 );
+            }
+            else
+            {
+                // fit to bounds
+                this.map.fitBounds( bounds );
+            }
 
- 		// maybe set center around markers
- 		center: function() {
+        },
 
- 			// vars
-			var bounds = new google.maps.LatLngBounds();
+        /**
+         * Asks the user for their geographical location and sets it as their center
+         *
+         * @example
+         * $('#element').jMap('geoCenter');
+         * 
+         * @return {[void]} No return
+         */
+        geoCenter: function() {
 
-			// loop through all markers and create bounds
-			$.each( this.map_markers, function( i, marker ){
+            if(navigator.geolocation) {
 
-				var latlng = new google.maps.LatLng( marker.position.lat(), marker.position.lng() );
+                var parent = this;
 
-				bounds.extend( latlng );
+                // request the users location
+                navigator.geolocation.getCurrentPosition(function(position) {
 
-			});
+                    // create a latlng object from the users location
+                    var pos = new google.maps.LatLng(position.coords.latitude,position.coords.longitude);
 
-			// only 1 marker?
-			if( this.map_markers.length == 1 )
-			{
-				// set center of map
-			    this.map.setCenter( bounds.getCenter() );
-			    this.map.setZoom( 16 );
-			}
-			else
-			{
-				// fit to bounds
-				this.map.fitBounds( bounds );
-			}
+                    parent.map.setCenter(pos);
 
- 		},
+                }, function(error) {
+                    parent._error( error.message );
+                });
+            }
+            else {
+                this._error( 'The user navigator is unavailiable.' );
+            }
+            
 
- 		// set geo center
- 		geoCenter: function() {
+        },
 
- 			if(navigator.geolocation) {
-
-				var parent = this;
-
-	    		// request the users location
-				navigator.geolocation.getCurrentPosition(function(position) {
-
-					// create a latlng object from the users location
-					var pos = new google.maps.LatLng(position.coords.latitude,position.coords.longitude);
-
-					parent.map.setCenter(pos);
-
-				}, function(error) {
-					parent.error( error.message );
-				});
-			}
-			else {
-				this.error( 'The user navigator is unavailiable.' );
-			}
-			
-
- 		},
-
- 		// throw error
- 		error: function( message ) {
-
- 			if( this.settings.debug === true ) {
- 				console.error( message );
- 			}
-
- 		},
-
- 		// get map instance
- 		get: function() {
-
-			if (typeof google === 'object' && typeof google.maps === 'object' && typeof this.map === 'object') {
-				return this.map;
-			}
-			else {
-				this.error( 'No map object exists.' );
-			}
- 		}
-
- 	};
-
- 	// main function
- 	$.fn.jmap = function( options ) {
-
-		return this.each( function () {
-
-			jMap.init( this, options );
-
-		});
-	}
-
- })(jQuery);
+        /**
+         * Throws an error if the debug setting is set to true
+         * 
+         * @param  {[string]} message The error string
+         */
+        _error: function( message ) {
+
+            if( this.settings.debug === true ) {
+                console.error( message );
+            }
+
+        },
+
+        /**
+         * The 'destroy' method is were you free the resources used by your plugin:
+         * references, unregister listeners, etc.
+         *
+         * Remember to unbind for your event:
+         *
+         * @example
+         * this.$someSubElement.off('.' + pluginName);
+         *
+         * Above example will remove any listener from your plugin for on the given
+         * element.
+         */
+        destroy: function() {
+
+        	this.$el.html('');
+        	this.$el.attr('style', '');
+
+            // Remove any attached data from your plugin
+            this.$el.removeData();
+        },
+
+        /**
+         * Gets the Google Maps instance
+         *
+         * @example
+         * $('#element').jMap('get');
+         * 
+         * @return {[object]} Google Maps object
+         */
+        get: function() {
+            return this.map;
+        },
+    };
+
+    /**
+     * Registers jMap as an actual jQuery Plugin
+     *
+     * @example
+     * $('#element').jMap({
+     *     	lat: 22.34123321,
+     *     	lng: 44.23135823
+     * });
+     */
+    $.fn[pluginName] = function(options) {
+        var args = arguments;
+
+        if (options === undefined || typeof options === 'object') {
+            
+            return this.each(function() {
+                if (!$.data(this, 'plugin_' + pluginName)) {
+                    $.data(this, 'plugin_' + pluginName, new jMap(this, options));
+                }
+            });
+        } else if (typeof options === 'string' && options[0] !== '_' && options !== 'init') {
+            
+            if (Array.prototype.slice.call(args, 1).length == 0 && $.inArray(options, $.fn[pluginName].getters) != -1) {
+                
+                var instance = $.data(this[0], 'plugin_' + pluginName);
+                return instance[options].apply(instance, Array.prototype.slice.call(args, 1));
+            } else {
+                
+                return this.each(function() {
+                    var instance = $.data(this, 'plugin_' + pluginName);
+                    if (instance instanceof jMap && typeof instance[options] === 'function') {
+                        instance[options].apply(instance, Array.prototype.slice.call(args, 1));
+                    }
+                });
+            }
+        }
+    };
+
+    /**
+     * Names of the pluguin methods that can act as a getter method.
+     * @type {Array}
+     */
+    $.fn[pluginName].getters = ['get', 'geoCenter', 'centerMap'];
+
+    /**
+     * Default options
+     */
+    $.fn[pluginName].defaults = {
+        lat             : 62.10,		// the default center latitude
+        lng             : 10.10,		// the default center longitude
+        height 			: 350,			// the default height of the canvas when no css height is set
+        zoom            : 16,			// the default zoom level
+        type            : 'roadmap',	// the map type. accepts: 'roadmap', 'terrain', 'hybrid' or 'satellite'
+        markers         : null,			// the markers of the map
+        centerMarkers   : true,			// if the map should be centered around markers
+        geoCenter       : false, 		// will be overridden if centerMarkers = true
+        debug           : false, 		// whether or not to show debug messages
+        beforeMapInit   : null, 		// callback before the map renders
+        afterMapInit    : null, 		// callback after the map has rendered
+        beforeMarkerAdd : null, 		// before markers are added to the map
+        afterMarkerAdd  : null, 		// after markers have been added to the map
+        beforeCenter    : null, 		// before center is set
+        afterCenter     : null, 		// after center is set
+        beforeGeoCenter : null, 		// before geocenter is set
+        afterGeoCenter  : null, 		// after geocenter is set
+    };
+
+})(jQuery, window, document);
