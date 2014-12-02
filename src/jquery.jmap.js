@@ -47,6 +47,12 @@
         // Store a jQuery reference  to the source element
         this.$el = $(element);
 
+        // wrap element in
+        this.$el.wrapAll( '<div class="jmap-container"></div>' );
+
+        // Store jQuery parent reference
+        this.$parent = this.$el.parent();
+
         // Set the instance options extending the plugin defaults and
         // the options passed by the user
         this.settings = $.extend({}, $.fn[pluginName].defaults, options);
@@ -54,12 +60,16 @@
         // map object
         this.map = null;
 
+        // map center
+        this.center = null;
+
         // raw markers
         this.markers = null;
 
         // google markers
         this.map_markers = [];
 
+        // init plugin
         this.init();
     }
 
@@ -82,7 +92,8 @@
          * this.$someSubElement.on('click.' + pluginName, function() {
          *      // Do something
          * });
-         *         
+         * 
+         * @access {Public}
          */
         init: function() {
 
@@ -91,6 +102,9 @@
 
                 // render the map
                 this._renderMap();
+
+                // aspectize it
+                this._aspectRatio();
 
             }
             else {
@@ -102,8 +116,10 @@
         /**
          * Evaluates a string to see if it is a function and if so runs it
          * 
-         * @param  {[string]} string The string to search for a function
-         * @return {[void]} No return
+         * @param  {String} string The string to search for a function
+         * @return {Void} No return
+         * 
+         * @access {Private}
          */
         _runFunction: function( string, options ) {
 
@@ -117,7 +133,9 @@
         /**
          * Renders a Google Map
          * 
-         * @return {[void]} No return
+         * @return {Void} No return
+         * 
+         * @access {Private}
          */
         _renderMap: function() {
 
@@ -200,6 +218,31 @@
                 
             }
 
+            this._doCenter();
+
+
+        },
+
+        /**
+         * Set center on resize. 
+         * 
+         * @return {Void} No return
+         * 
+         * @access {Private}
+         */
+        _doCenter: function() {
+
+        	if( this.center !== null ) {
+
+        		var parent = this;
+
+        		google.maps.event.addDomListener(window, 'resize', function() {
+        			parent.map.setCenter(parent.center);
+				});
+
+        	}
+
+
 
         },
 
@@ -207,7 +250,9 @@
          * Finds all pre-set markers to the map. 
          * jMap accepts marker data both in DOM and via the options object
          * 
-         * @return {[void]} No return
+         * @return {Void} No return
+         * 
+         * @access {Private}
          */
         _findMarkers: function() {
 
@@ -248,7 +293,9 @@
         /**
          * Adds all pre-set markers to the map
          * 
-         * @return {[void]} No return
+         * @return {Void} No return
+         * 
+         * @access {Private}
          */
         _addMarkers: function() {
 
@@ -267,13 +314,65 @@
         },
 
         /**
+         * Throws an error if the debug setting is set to true
+         * 
+         * @param  {String} message The error string
+         * 
+         * @access {Private}
+         */
+        _error: function( message ) {
+
+            if( this.settings.debug === true ) {
+                console.error( message );
+            }
+
+        },
+
+        /**
+	     * Make sure the map fits aspect ratio
+         * 
+         * @access {Private}
+	     */
+     	_aspectRatio: function() {
+
+     		if( this.settings.aspectRatio !== false ) {
+
+     			var $parent 	= this.$parent,
+     				$el 		= this.$el,
+     				ratio 		= 56.25,
+     				aspect 		= this.settings.aspectRatio.split('/');
+
+     			ratio = (aspect[1]/aspect[0]) * 100;
+
+     			$parent.css({
+     				'position' 		: 'relative',
+     				'padding-top'	: ratio + '%',
+     			})
+
+     			$el.css({
+     				'position'		: 'absolute',
+     				'top'			: '0',
+     				'bottom'		: '0',
+     				'left'			: '0',
+     				'right'			: '0',
+     				'height'		: 'auto'
+     			})
+
+     		}
+		
+     	},
+
+        /**
          * Add a new marker to the map
          *
          * @example
          * $('#element').jMap('addMarker',{ lat: 00.00, lng: 00.00, content: 'Balooo', events: {} });
          *  
-         * @param  {[object]} options The options for a new marker
-         * @return {[boolean]} Success
+         * @param  {Object} options The options for a new marker
+         * 
+         * @return {Boolean} Success
+         * 
+         * @access {Public}
          */
         addMarker: function( marker ) {
 
@@ -325,7 +424,9 @@
          * @example
          * $('#element').jMap('centerMap');
          * 
-         * @return {[void]} No return
+         * @return {Void} No return
+         * 
+         * @access {Public}
          */
         centerMap: function() {
 
@@ -354,6 +455,8 @@
                 this.map.fitBounds( bounds );
             }
 
+            this.center = bounds.getCenter();
+
         },
 
         /**
@@ -362,7 +465,9 @@
          * @example
          * $('#element').jMap('geoCenter');
          * 
-         * @return {[void]} No return
+         * @return {Void} No return
+         * 
+         * @access {Public}
          */
         geoCenter: function() {
 
@@ -377,6 +482,7 @@
                     var pos = new google.maps.LatLng(position.coords.latitude,position.coords.longitude);
 
                     parent.map.setCenter(pos);
+                    this.center = pos;
 
                 }, function(error) {
                     parent._error( error.message );
@@ -386,19 +492,6 @@
                 this._error( 'The user navigator is unavailiable.' );
             }
             
-
-        },
-
-        /**
-         * Throws an error if the debug setting is set to true
-         * 
-         * @param  {[string]} message The error string
-         */
-        _error: function( message ) {
-
-            if( this.settings.debug === true ) {
-                console.error( message );
-            }
 
         },
 
@@ -413,6 +506,8 @@
          *
          * Above example will remove any listener from your plugin for on the given
          * element.
+         * 
+         * @access {Public}
          */
         destroy: function() {
 
@@ -429,7 +524,9 @@
          * @example
          * $('#element').jMap('get');
          * 
-         * @return {[object]} Google Maps object
+         * @return {Object} Google Maps object
+         * 
+         * @access {Public}
          */
         get: function() {
             return this.map;
@@ -474,7 +571,7 @@
     };
 
     /**
-     * Names of the pluguin methods that can act as a getter method.
+     * Plugin getter methods
      * @type {Array}
      */
     $.fn[pluginName].getters = ['get', 'geoCenter', 'centerMap'];
@@ -485,7 +582,9 @@
     $.fn[pluginName].defaults = {
         lat             : 62.10,		// the default center latitude
         lng             : 10.10,		// the default center longitude
-        height 			: 350,			// the default height of the canvas when no css height is set
+        height 			: 350,			// the default height of the canvas when no css height is set, will be ignored if A/R is ture
+        centerResize	: true,			// always keep the map center on resize
+        aspectRatio 	: '16/9',		// make sure the map keeps its aspect ratio. accepts: string 'a/r' or boolean false
         zoom            : 16,			// the default zoom level
         type            : 'roadmap',	// the map type. accepts: 'roadmap', 'terrain', 'hybrid' or 'satellite'
         markers         : null,			// the markers of the map
