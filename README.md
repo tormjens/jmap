@@ -21,7 +21,7 @@ As a front-end developer you often encounter implementing Google Maps to a site.
 3. Include plugin's code:
 
 	```html
-	<script src="src/min/jquery.jmap.js"></script>
+	<script src="dist/jquery.jmap.min.js"></script>
 	```
 
 3. Call the plugin:

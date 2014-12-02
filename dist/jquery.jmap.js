@@ -1,4 +1,12 @@
 /*
+ *  jQuery jMap - v0.1
+ *  A jQuery Google Maps wrapper plugin.
+ *  https://github.com/tormjens/jmap
+ *
+ *  Made by Tor Morten Jensen
+ *  Under MIT License
+ */
+/*
  * jmap.js Version 0.1
  * A jQuery Google Maps plugin
  *  

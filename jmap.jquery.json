@@ -1,0 +1,38 @@
+{
+	"name": "boilerplate",
+	"title": "jQuery jMap",
+	"description": "A jQuery Google Maps wrapper plugin.",
+	"keywords": [
+		"jquery",
+		"google",
+		"maps",
+		"gmap",
+		"map"
+	],
+	"version": "0.1",
+	"author": {
+		"name": "Tor Morten Jensen",
+		"email": "tormorten@tormorten.no",
+		"url": "https://github.com/tormjens"
+	},
+	"maintainers": [
+		{
+			"name": "Tor Morten Jensen",
+			"email": "tormorten@tormorten.no",
+			"url": "https://github.com/tormjens"
+		}
+	],
+	"licenses": [
+		{
+			"type": "MIT",
+			"url": "http://zenorocha.mit-license.org/"
+		}
+	],
+	"bugs": "https://github.com/tormjens/jmap/issues",
+	"homepage": "https://github.com/tormjens/jmap",
+	"docs": "https://github.com/tormjens/jmap#readme",
+	"download": "https://github.com/tormjens/jmap/archive/master.zip",
+	"dependencies": {
+		"jquery": ">=2.0"
+	}
+}
