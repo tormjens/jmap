@@ -36,6 +36,7 @@
  		// map init
  		init: function( wrapper, options ) {
 
+ 			// parse options with our own stuff
  			this.settings = $.extend({
 				lat				: 62.10,
 				lng				: 10.10,
@@ -44,7 +45,15 @@
 				markers			: null,
 				centerMarkers	: false,
 				geoCenter		: true, // will be overridden if centerMarkers = true
-				debug			: false
+				debug			: false,
+				beforeMapInit	: null,
+				afterMapInit	: null,
+				beforeMarkerAdd	: null,
+				afterMarkerAdd	: null,
+				beforeCenter	: null,
+				afterCenter		: null,
+				beforeGeoCenter	: null,
+				afterGeoCenter	: null,
 			}, options);
 
 			// set the container
@@ -63,6 +72,15 @@
  			}
 
 			
+ 		},
+
+ 		// checks if a string is a function and runs it
+ 		run_function: function( string ) {
+
+ 			if (typeof string == 'function') {
+		        string.call(this);
+		    }
+
  		},
 
  		// render the map
@@ -104,32 +122,47 @@
 				mapTypeId	: type
  			};
 
+ 			// before the map init
+ 			this.run_function( this.settings.beforeMapInit );
+
  			// create the map object
- 			this.map = new google.maps.Map( this.container[0], args);
+ 			this.map 		= new google.maps.Map( this.container[0], args);
+
+ 			// after map init
+ 			this.run_function( this.settings.afterMapInit );
+
+ 			// before the marker add
+ 			this.run_function( this.settings.beforeMarkerAdd );
 
  			// adds markers to the map
  			this.add_markers();
 
+ 			// after the marker add
+ 			this.run_function( this.settings.afterMarkerAdd );
+
  			// maybe center on all markers
- 			if( this.settings.centerMarkers ) {
+	 			if( this.settings.centerMarkers ) {
+
+	 			// before setting the center
+	 			this.run_function( this.settings.beforeCenter );
+
  				this.center();
+
+	 			// after setting the center
+	 			this.run_function( this.settings.afterCenter );
+
  			}
  			// maybe set geo
  			else {
 
- 				if(navigator.geolocation) {
+	 			// before setting the center
+	 			this.run_function( this.settings.beforeGeoCenter );
 
-		    		// request the users location
-					navigator.geolocation.getCurrentPosition(function(position) {
+ 				this.geoCenter();
 
-						// create a latlng object from the users location
-						var pos = new google.maps.LatLng(position.coords.latitude,position.coords.longitude);
-
-						this.map.setCenter(pos);
-
-					})
-				}
-
+	 			// before setting the center
+	 			this.run_function( this.settings.afterGeoCenter );
+ 				
  			}
 
 
@@ -144,9 +177,9 @@
  			// first find markers in DOM
  			this.container.find( 'div.marker' ).each(function() {
 
- 				var lat = $(this).data('lat');
- 				var lng = $(this).data('lng');
- 				var content = $(this).html();
+ 				var lat 		= $(this).data('lat');
+ 				var lng 		= $(this).data('lng');
+ 				var content 	= $(this).html();
 
  				var obj = {
  					lat 		: lat,
@@ -239,6 +272,32 @@
 
  		},
 
+ 		// set geo center
+ 		geoCenter: function() {
+
+ 			if(navigator.geolocation) {
+
+				var parent = this;
+
+	    		// request the users location
+				navigator.geolocation.getCurrentPosition(function(position) {
+
+					// create a latlng object from the users location
+					var pos = new google.maps.LatLng(position.coords.latitude,position.coords.longitude);
+
+					parent.map.setCenter(pos);
+
+				}, function(error) {
+					parent.error( error.message );
+				});
+			}
+			else {
+				this.error( 'The user navigator is unavailiable.' );
+			}
+			
+
+ 		},
+
  		// throw error
  		error: function( message ) {
 
@@ -246,6 +305,17 @@
  				console.error( message );
  			}
 
+ 		},
+
+ 		// get map instance
+ 		get: function() {
+
+			if (typeof google === 'object' && typeof google.maps === 'object' && typeof this.map === 'object') {
+				return this.map;
+			}
+			else {
+				this.error( 'No map object exists.' );
+			}
  		}
 
  	};
