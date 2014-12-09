@@ -176,7 +176,8 @@
             var args = {
                 center      : new google.maps.LatLng(this.settings.lat, this.settings.lng),
                 zoom        : this.settings.zoom,
-                mapTypeId   : type
+                mapTypeId   : type,
+                styles		: this.settings.styles
             };
 
             // before the map init
@@ -605,6 +606,7 @@
         afterCenter     : null, 		// after center is set
         beforeGeoCenter : null, 		// before geocenter is set
         afterGeoCenter  : null, 		// after geocenter is set
+        styles			: [],			// a google maps style array
     };
 
 })(jQuery, window, document);

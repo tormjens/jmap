@@ -1,8 +1,8 @@
 # jQuery jMap [![Build Status](https://secure.travis-ci.org/tormjens/jmap.svg?branch=master)](https://travis-ci.org/tormjens/jmap) ![Bower Version](https://badge.fury.io/bo/jmap.svg)
 
-### A jump-start for jQuery plugins development
+### A quick and easy way to implement Google Maps to your project
 
-As a front-end developer you often encounter implementing Google Maps to a site. Google Maps isn't hard, I know, but repeating the same code over and over again, well, it sucks. jMap is a simple to use wrapper for the Google Maps API. 
+As a front-end developer you often encounter implementing Google Maps to a site. Google Maps isn't hard, I know, but repeating the same code over and over again, well, it sucks. jMap is a simple to use wrapper for the Google Maps API and has some other nice functions too.
 
 ## Usage
 
@@ -33,3 +33,10 @@ As a front-end developer you often encounter implementing Google Maps to a site.
 	});
 	```
 
+## Install
+
+### Using Bower
+
+```bash
+bower install jmap
+```
